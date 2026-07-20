@@ -1,3 +1,7 @@
 theme: jekyll-theme-minimal
 title: kxyjs's homepage
 description: kxyjs's home!
+deploy:
+  type: git
+  repo: https://github.com/kxyjs/kxyjs.github.io.git
+  branch: main
