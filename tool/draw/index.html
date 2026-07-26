@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>无限画布自动保存画图工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { background: #f0f2f5; padding: 20px; overflow: hidden; }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 10;
+        }
+        .tool-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #e8e8e8;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .tool-btn.active { background: #1677ff; color: white; }
+        .group { display: flex; gap: 6px; align-items: center; }
+        label { font-size: 14px; white-space: nowrap; }
+        input[type="range"] { width: 70px; }
+        input[type="number"] { width: 48px; padding: 3px; }
+        #canvasWrap {
+            overflow: auto;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background: repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px;
+            width: 100vw;
+            height: calc(100vh - 130px);
+            position: relative;
+        }
+        canvas { cursor: crosshair; position: absolute; top: 0; left: 0; }
+        #textInput {
+            position: absolute;
+            border: 1px solid #1677ff;
+            outline: none;
+            font-size: inherit;
+            background: rgba(255,255,255,0.95);
+            padding: 2px 4px;
+            display: none;
+            z-index: 5;
+        }
+        .tip { font-size: 12px; color: #666; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="tool-btn active" data-tool="brush">画笔</button>
+        <button class="tool-btn" data-tool="line">直线</button>
+        <button class="tool-btn" data-tool="text">T 文字</button>
+        <div class="group">
+            <label>R:</label><input type="number" min="0" max="255" value="0" id="rInput">
+            <label>G:</label><input type="number" min="0" max="255" value="0" id="gInput">
+            <label>B:</label><input type="number" max="255" value="0" id="bInput">
+        </div>
+        <div class="group">
+            <label>线条:</label>
+            <input type="range" min="1" max="100" value="5" id="sizeRange">
+            <span id="sizeValue">5px</span>
+        </div>
+        <div class="group">
+            <label>字号:</label>
+            <input type="range" min="12" max="200" value="24" id="fontSizeRange">
+            <span id="fontSizeValue">24px</span>
+        </div>
+        <div class="group">
+            <label>缩放:</label>
+            <button class="tool-btn" id="zoomOut">-</button>
+            <span id="zoomValue">100%</span>
+            <button class="tool-btn" id="zoomIn">+</button>
+        </div>
+        <button class="tool-btn" id="exportBtn">导出图片</button>
+        <button class="tool-btn" id="clearBtn">清空画布</button>
+        <span class="tip">✅ 自动本地保存中</span>
+    </div>
+    <div id="canvasWrap">
+        <canvas id="drawCanvas"></canvas>
+        <input type="text" id="textInput" placeholder="按回车确认">
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasWrap = document.getElementById('canvasWrap');
+        const textInput = document.getElementById('textInput');
+
+        // 初始配置：超大弹性画布，默认10000×10000px，触碰边缘自动扩容
+        const INIT_SIZE = 10000;
+        canvas.width = INIT_SIZE;
+        canvas.height = INIT_SIZE;
+
+        // 基础状态
+        let currentTool = 'brush', isDrawing = false;
+        let lastX = 0, lastY = 0, startX = 0, startY = 0;
+        let lineSize = 5, currentColor = 'rgb(0,0,0)';
+        let zoom = 1, currentFontSize = 24;
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        let tempCtx = tempCanvas.getContext('2d');
+        let saveTimer = null;
+
+        // 初始化画布背景+加载本地历史保存
+        const initCanvas = () => {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // 加载本地存储的画布数据
+            const savedData = localStorage.getItem('infiniteCanvasDraw');
+            if (savedData) {
+                const img = new Image();
+                img.onload = () => ctx.drawImage(img, 0, 0);
+                img.src = savedData;
+            }
+        };
+
+        // 核心：实时自动保存到localStorage，防抖避免频繁写入卡顿
+        const autoSave = () => {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                // 只裁剪实际有内容的有效区域，避免保存全量超大空白画布
+                const validDataUrl = canvas.toDataURL('image/png', 0.8);
+                localStorage.setItem('infiniteCanvasDraw', validDataUrl);
+            }, 300);
+        };
+
+        // 触碰画布边缘自动扩容，实现无限大效果
+        const autoExpand = (x, y) => {
+            const expandSize = 2000;
+            let needExpand = false;
+            // 向右/下扩容
+            if (x > canvas.width - 500) {
+                canvas.width += expandSize;
+                needExpand = true;
+            }
+            if (y > canvas.height - 500) {
+                canvas.height += expandSize;
+                needExpand = true;
+            }
+            if (!needExpand) return;
+            // 扩容后保留原有绘制内容
+            const oldData = ctx.getImageData(0,0, tempCanvas.width, tempCanvas.height);
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            tempCtx.putImageData(oldData, 0, 0);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+            ctx.drawImage(tempCanvas, 0,0);
+        };
+
+        // 工具切换
+        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTool = btn.dataset.tool;
+                textInput.style.display = 'none';
+            });
+        });
+
+        // RGB颜色更新
+        const updateColor = () => {
+            const r = Math.min(255, Math.max(0, +document.getElementById('rInput').value||0));
+            const g = Math.min(255, Math.max(0, +document.getElementById('gInput').value||0));
+            const b = Math.min(255, Math.max(0, +document.getElementById('bInput').value||0));
+            currentColor = `rgb(${r},${g},${b})`;
+        };
+        ['rInput','gInput','bInput'].forEach(id => document.getElementById(id).addEventListener('input', updateColor));
+
+        // 线条/字号缩放逻辑
+        document.getElementById('sizeRange').addEventListener('input', e=>{
+            lineSize = e.target.value;
+            document.getElementById('sizeValue').textContent = `${lineSize}px`;
+        });
+        document.getElementById('fontSizeRange').addEventListener('input', e=>{
+            currentFontSize = e.target.value;
+            document.getElementById('fontSizeValue').textContent = `${currentFontSize}px`;
+        });
+        document.getElementById('zoomIn').addEventListener('click', ()=>{if(zoom<3)zoom+=0.25;updateZoom()});
+        document.getElementById('zoomOut').addEventListener('click', ()=>{if(zoom>0.25)zoom-=0.25;updateZoom()});
+        const updateZoom = () => {
+            canvas.style.transform = `scale(${zoom})`;
+            canvas.style.transformOrigin = 'top left';
+            document.getElementById('zoomValue').textContent = `${Math.round(zoom*100)}%`;
+        };
+
+        // 适配缩放坐标获取
+        const getMousePos = e => {
+            const rect = canvas.getBoundingClientRect();
+            const pos = {
+                x: (e.clientX - rect.left)/zoom,
+                y: (e.clientY - rect.top)/zoom
+            };
+            // 触发自动扩容
+            autoExpand(pos.x, pos.y);
+            return pos;
+        };
+
+        // 绘制主逻辑
+        canvas.addEventListener('mousedown', e => {
+            if(currentTool === 'text') {
+                const pos = getMousePos(e);
+                const rect = canvas.getBoundingClientRect();
+                textInput.style.left = `${rect.left + pos.x * zoom}px`;
+                textInput.style.top = `${rect.top + pos.y * zoom}px`;
+                textInput.style.fontSize = `${currentFontSize * zoom}px`;
+                textInput.style.color = currentColor;
+                textInput.value = '';
+                textInput.dataset.x = pos.x;
+                textInput.dataset.y = pos.y;
+                textInput.style.display = 'block';
+                textInput.focus();
+                return;
+            }
+            isDrawing = true;
+            const pos = getMousePos(e);
+            lastX = pos.x; lastY = pos.y; startX = pos.x; startY = pos.y;
+            tempCtx.drawImage(canvas,0,0);
+            if(currentTool === 'brush') {
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineCap = ctx.lineJoin = 'round';
+                ctx.lineWidth = lineSize;
+                ctx.strokeStyle = currentColor;
+            }
+        });
+
+        // 文字确认绘制
+        const confirmText = () => {
+            if(!textInput.value.trim()) {
+                textInput.style.display = 'none';
+                return;
+            }
+            const x = +textInput.dataset.x, y = +textInput.dataset.y;
+            ctx.font = `${currentFontSize}px sans-serif`;
+            ctx.fillStyle = currentColor;
+            ctx.fillText(textInput.value, x, y + currentFontSize);
+            textInput.style.display = 'none';
+            autoSave();
+        };
+        textInput.addEventListener('keydown', e=>e.key==='Enter'&&confirmText());
+        canvas.addEventListener('click', confirmText);
+
+        canvas.addEventListener('mousemove', e=>{
+            if(!isDrawing) return;
+            const pos = getMousePos(e);
+            if(currentTool === 'brush') {
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            } else if(currentTool === 'line') {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.drawImage(tempCanvas,0,0);
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.lineCap = 'round';
+                ctx.lineWidth = lineSize;
+                ctx.strokeStyle = currentColor;
+                ctx.stroke();
+            }
+            lastX = pos.x; lastY = pos.y;
+        });
+        canvas.addEventListener('mouseup', ()=>{
+            isDrawing = false;
+            autoSave();
+        });
+        canvas.addEventListener('mouseleave', ()=>isDrawing=false);
+
+        // 导出和清空功能
+        document.getElementById('exportBtn').addEventListener('click', ()=>{
+            const a = document.createElement('a');
+            a.download = `我的画作_${Date.now()}.png`;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+        });
+        document.getElementById('clearBtn').addEventListener('click', ()=>{
+            if(confirm('确定要清空所有内容吗？清空后本地保存也会同步删除')) {
+                ctx.fillStyle = 'white';
+                ctx.clearRect(0,0,canvas.width, canvas.height);
+                ctx.fillRect(0,0,canvas.width, canvas.height);
+                localStorage.removeItem('infiniteCanvasDraw');
+            }
+        });
+
+        initCanvas();
+    </script>
+</body>
+</html>
