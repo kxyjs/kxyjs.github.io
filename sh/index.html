@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>密钥跳转系统</title>
+    <title>跳转系统</title>
     <style>
         * {
             margin: 0;
@@ -68,15 +68,15 @@
 </head>
 <body>
     <div class="container">
-        <h2>密钥验证入口</h2>
-        <input type="text" id="inputKey" placeholder="请输入访问密钥">
+        <h2>验证入口</h2>
+        <input type="text" id="inputKey" placeholder="请输入密钥">
         <button id="submitBtn">确认跳转</button>
         <div class="tip" id="tip"></div>
     </div>
     <script>
         // 密钥库仅在页面运行时生效，不写入本地存储
         const accessDB = {
-            "11af": "https://www.com",
+            "adr1": "https://kxyjs.github.io/fun/adarkroom",
             "7a12": "https://www.cn"
         };
         const inputEl = document.getElementById('inputKey');
@@ -88,7 +88,7 @@
                 tipEl.textContent = "验证通过，即将跳转...";
                 setTimeout(() => window.location.href = accessDB[userInput], 1000);
             } else {
-                tipEl.textContent = "无效密钥，请重新输入";
+                tipEl.textContent = "无效，请重新输入";
                 inputEl.value = '';
             }
         });
