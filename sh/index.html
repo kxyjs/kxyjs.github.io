@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>跳转系统</title>
+    <title>密钥跳转系统</title>
     <style>
         * {
             margin: 0;
@@ -73,37 +73,25 @@
         <button id="submitBtn">确认跳转</button>
         <div class="tip" id="tip"></div>
     </div>
-
     <script>
-        // 初始化本地模拟数据库
+        // 密钥库仅在页面运行时生效，不写入本地存储
         const accessDB = {
             "11af": "https://www.com",
             "7a12": "https://www.cn"
         };
-        // 将密钥库持久化存入localStorage模拟本地数据库
-        if(!localStorage.getItem('accessKeyDB')) {
-            localStorage.setItem('accessKeyDB', JSON.stringify(accessDB));
-        }
-
         const inputEl = document.getElementById('inputKey');
         const submitBtn = document.getElementById('submitBtn');
         const tipEl = document.getElementById('tip');
-
         submitBtn.addEventListener('click', () => {
             const userInput = inputEl.value.trim().toLowerCase();
-            const db = JSON.parse(localStorage.getItem('accessKeyDB'));
-            
-            if(db[userInput]) {
+            if(accessDB[userInput]) {
                 tipEl.textContent = "验证通过，即将跳转...";
-                // 1秒后跳转对应站点
-                setTimeout(() => window.location.href = db[userInput], 1000);
+                setTimeout(() => window.location.href = accessDB[userInput], 1000);
             } else {
                 tipEl.textContent = "无效密钥，请重新输入";
                 inputEl.value = '';
             }
         });
-
-        // 支持回车快捷提交
         inputEl.addEventListener('keydown', (e) => {
             if(e.key === 'Enter') submitBtn.click();
         });
