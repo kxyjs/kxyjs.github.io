@@ -1,0 +1,135 @@
+
+header{
+    background-color: rgba(21, 116, 239, 0.49);
+    border: 3px #9d8189 solid;
+    padding:30px ;
+    margin:5px;
+    height:50px;
+    width:100%;
+    position: fixed;
+}
+header ul{
+    position: absolute;
+    right:2vw;
+    top:0;
+}
+header li{
+    display: inline;
+    margin-right: 4vw;
+}
+header h1{
+    position: absolute;
+    left:120px;
+    top:0;
+    line-height: 80px;
+}
+
+
+.main{
+    
+
+    background-color: #7c7ef48c;
+    border: 3px #0a5cd7 solid;
+    padding:30px ;
+    margin:5px;
+    
+    /*
+    background-color: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 0.666667px solid rgba(255, 255, 255, 0.18);
+    box-shadow: rgba(142, 142, 142, 0.19) 0px 6px 15px 0px;
+    -webkit-box-shadow: rgba(142, 142, 142, 0.19) 0px 6px 15px 0px;
+    border-radius: 12px;
+    -webkit-border-radius: 12px;
+    color: rgba(255, 255, 255, 0.75);
+    */
+}
+.slogan{
+    diplay:flex;
+    
+}
+.login button{
+    cursor:pointer;
+}
+.content{
+    /*background-color: #62ff7aa0;*/
+    border: 3px #11641eeb solid;
+    padding:30px ;
+    margin:5px;
+    background-image: url("file/web/home_background2.jpg");
+    background-repeat: no-repeat;
+    color:white;
+    background-size:cover;
+    background-position:center;
+    height:1300px;
+
+}
+.content pre{
+    font-size:50px;
+}
+.photo{
+    background-color: #d6ccc2;
+    border: 3px #9d8189 solid;
+    padding:30px ;
+    margin:5px;
+}
+
+footer{
+    background-color: #000000;
+    color:#B7B7B7;
+    height:60px;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+
+}
+
+
+
+a{
+    text-decoration: none;
+
+    border-radius: 55px;
+    background: #a59af97e;
+    box-shadow:  16px 16px 32px #6d66a4,
+                -16px -16px 32px #ddceff;
+
+}
+a:hover{
+    /*
+    text-decoration: underline;
+    */
+    border-radius: 55px;
+    background: #a59af97e;
+    box-shadow: inset 16px 16px 32px #6d66a4,
+                inset -16px -16px 32px #ddceff;
+}
+.menu{
+    display:none;
+}
+/*响应式css*/
+
+@media screen and (max-width:768px){
+    header ul{
+        display:none;
+    }
+    header h1{
+        left:50%;
+        transform:translateX(-50%);
+    }
+    .content pre{
+        font-size:20px;
+    }
+    .menu{
+        display:block;
+        background-color:transparent;
+        font-size:30px;
+        position:absolute;
+        top:5px;
+        left:20px;
+        border:none;
+        cursor:pointer;
+    }
+}
