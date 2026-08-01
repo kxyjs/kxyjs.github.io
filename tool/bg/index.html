@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线桌面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-image: url("background/1.png");
+            background-size: cover;
+            background-position: center;
+            transition: background-image 0.3s ease;
+        }
+
+        /* 左上角网页导航区域 */
+        .nav-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 15px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            min-width: 180px;
+        }
+
+        .nav-panel h2 {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .nav-list {
+            list-style: none;
+        }
+
+        .nav-list li {
+            margin: 8px 0;
+        }
+
+        .nav-list a {
+            text-decoration: none;
+            color: #3498db;
+            font-size: 15px;
+            transition: color 0.2s;
+        }
+
+        .nav-list a:hover {
+            color: #2980b9;
+        }
+
+        /* 中央时钟区域 */
+        .clock-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 30px 50px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .time-display {
+            font-size: 72px;
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: center;
+            letter-spacing: 3px;
+        }
+
+        /* 右下角设置按钮 */
+        .settings-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(52, 152, 219, 0.9);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+        }
+
+        .settings-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        /* 设置弹窗 */
+        .settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .settings-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .settings-content h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .setting-section {
+            margin-bottom: 25px;
+        }
+
+        .setting-section h4 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .upload-area:hover {
+            border-color: #3498db;
+        }
+
+        .nav-edit-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .nav-edit-item input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-save {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-cancel {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #e74c3c;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-add {
+            background-color: #3498db;
+            color: white;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 左上角导航 -->
+    <div class="nav-panel">
+        <h2>网页导航</h2>
+        <ul class="nav-list" id="navList">
+            <li><a href="https://hydro.ac" target="_blank">hydro_oj</a></li>
+            <li><a href="https://luogu.com.cn" target="_blank">洛谷</a></li>
+        </ul>
+    </div>
+
+    <!-- 中央时钟 -->
+    <div class="clock-panel">
+        <div class="time-display" id="clock">00:00:00</div>
+    </div>
+
+    <!-- 右下角设置按钮 -->
+    <button class="settings-btn" id="openSettings">设置</button>
+
+    <!-- 设置弹窗 -->
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <h3>桌面设置</h3>
+
+            <!-- 背景上传区域 -->
+            <div class="setting-section">
+                <h4>自定义桌面背景</h4>
+                <div class="upload-area" id="bgUploadArea">
+                    <p>点击上传新的背景图片</p>
+                    <input type="file" id="bgUpload" accept="image/*" style="display: none;">
+                </div>
+            </div>
+
+            <!-- 导航编辑区域 -->
+            <div class="setting-section">
+                <h4>自定义网页导航</h4>
+                <div id="navEditList"></div>
+                <button class="btn btn-add" id="addNavItem">添加新导航</button>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-cancel" id="closeSettings">取消</button>
+                <button class="btn btn-save" id="saveSettings">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化变量
+        const body = document.body;
+        const clock = document.getElementById('clock');
+        const navList = document.getElementById('navList');
+        const openSettingsBtn = document.getElementById('openSettings');
+        const closeSettingsBtn = document.getElementById('closeSettings');
+        const saveSettingsBtn = document.getElementById('saveSettings');
+        const settingsModal = document.getElementById('settingsModal');
+        const bgUploadArea = document.getElementById('bgUploadArea');
+        const bgUpload = document.getElementById('bgUpload');
+        const navEditList = document.getElementById('navEditList');
+        const addNavItemBtn = document.getElementById('addNavItem');
+
+        // 从本地存储读取保存的配置
+        let navData = JSON.parse(localStorage.getItem('onlineDesktopNav')) || [
+            {name: 'hydro_oj', url: 'https://hydro.ac'},
+            {name: '洛谷', url: 'https://luogu.com.cn'}
+        ];
+        let customBg = localStorage.getItem('onlineDesktopBg');
+
+        // 应用保存的背景
+        if (customBg) {
+            body.style.backgroundImage = `url(${customBg})`;
+        }
+
+        // 时钟功能，精确到秒
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            clock.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // 渲染导航列表
+        function renderNav() {
+            navList.innerHTML = '';
+            navData.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="${item.url}" target="_blank">${item.name}</a>`;
+                navList.appendChild(li);
+            });
+        }
+        renderNav();
+
+        // 渲染导航编辑列表
+        function renderNavEdit() {
+            navEditList.innerHTML = '';
+            navData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'nav-edit-item';
+                div.innerHTML = `
+                    <input type="text" placeholder="导航名称" value="${item.name}" class="nav-name-input">
+                    <input type="text" placeholder="导航链接" value="${item.url}" class="nav-url-input">
+                    <button class="btn btn-delete" data-index="${index}">删除</button>
+                `;
+                navEditList.appendChild(div);
+            });
+
+            // 绑定删除按钮事件
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    navData.splice(index, 1);
+                    renderNavEdit();
+                });
+            });
+        }
+
+        // 打开设置弹窗
+        openSettingsBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'flex';
+            renderNavEdit();
+        });
+
+        // 关闭设置弹窗
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+        });
+
+        // 点击弹窗背景关闭
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.style.display = 'none';
+            }
+        });
+
+        // 背景上传触发
+        bgUploadArea.addEventListener('click', () => {
+            bgUpload.click();
+        });
+
+        // 处理背景图片上传
+        bgUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    customBg = event.target.result;
+                    body.style.backgroundImage = `url(${customBg})`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 添加新导航项
+        addNavItemBtn.addEventListener('click', () => {
+            navData.push({name: '', url: ''});
+            renderNavEdit();
+        });
+
+        // 保存所有设置
+        saveSettingsBtn.addEventListener('click', () => {
+            // 读取编辑后的导航数据
+            const nameInputs = document.querySelectorAll('.nav-name-input');
+            const urlInputs = document.querySelectorAll('.nav-url-input');
+            navData = [];
+            for (let i = 0; i < nameInputs.length; i++) {
+                const name = nameInputs[i].value.trim();
+                const url = urlInputs[i].value.trim();
+                if (name && url) {
+                    navData.push({name, url});
+                }
+            }
+
+            // 保存到本地存储
+            localStorage.setItem('onlineDesktopNav', JSON.stringify(navData));
+            if (customBg) {
+                localStorage.setItem('onlineDesktopBg', customBg);
+            }
+
+            // 应用新配置
+            renderNav();
+            settingsModal.style.display = 'none';
+            alert('设置已保存！');
+        });
+    </script>
+</body>
+</html>
