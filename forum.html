@@ -94,10 +94,10 @@
 
     <div class="tip" id="statusTip">页面初始化中...</div>
     <div id="listBox"></div>
-    kxyjs提供支持！
+    kxyjs提供支持！(v1.3.4)
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        alert("✅ 论坛页面JS加载成功");
+        //alert("✅ 论坛页面JS加载成功");
 
         const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
         const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
@@ -147,10 +147,10 @@
                 "https://v4.ident.me/.json",
                 "https://ipaddr.site/json"
             ];
-
+            alert(`我们在尝试获取ip……(最多20s!)`);
             for(let i = 0; i < 10; i++) {
                 try {
-                    alert(`🔄 第${i+1}次尝试获取公网IP...`);
+                    // alert(`🔄 第${i+1}次尝试获取公网IP...`);
                     let res = await fetch(ipApis[i], {signal: AbortSignal.timeout(2000)});
                     if(!res.ok) continue;
                     let data = await res.json();
@@ -199,7 +199,7 @@
 
         // 发布留言按钮逻辑
         window.userClickPost = async function() {
-            alert("🟢 发布按钮点击成功");
+            //alert("🟢 发布按钮点击成功");
             
             let u = document.getElementById("uInput").value.trim();
             let p = document.getElementById("pInput").value.trim();
@@ -211,7 +211,7 @@
             }
 
             let encPwd = easyEnc(p);
-            alert("🔐 密码加密完成");
+            //alert("🔐 密码加密完成");
 
             let userRes = await sb.from("lt_users").select("username").eq("username", u).eq("password", encPwd);
             if(userRes.error) {
@@ -222,7 +222,7 @@
                 alert("❌ 账号或密码不存在");
                 return;
             }
-            alert("✅ 账号校验通过");
+            //alert("✅ 账号校验通过");
 
             let lastMsgRes = await sb.from("lt_message").select("time").eq("username", u).order("time", {ascending: false}).limit(1);
             if(lastMsgRes.data && lastMsgRes.data.length > 0) {
@@ -234,7 +234,7 @@
                     return;
                 }
             }
-            alert("✅ 发送冷却校验通过");
+            //alert("✅ 发送冷却校验通过");
 
             let insertRes = await sb.from("lt_message").insert({
                 ip: myIp,
@@ -275,7 +275,7 @@
                 head.className = "msg-head";
                 let unameSpan = document.createElement("span");
                 if(item.username === "kxyjs") {
-                    unameSpan.innerText = "kxyjs-V官方账号";
+                    unameSpan.innerText = "kxyjs-V官方账号(真的！！！！)";
                     unameSpan.className = "gold";
                 } else {
                     unameSpan.innerText = item.username;
