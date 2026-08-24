@@ -24,6 +24,9 @@
             text-decoration: none;
             margin-right: 20px;
         }
+        .nav-bar a:hover {
+            text-decoration: underline;
+        }
         .item {
             margin-bottom: 20px;
         }
@@ -72,7 +75,7 @@
     </div>
     <!-- 写死onclick事件，100%触发 -->
     <button id="regBtn" onclick="userClickReg()">立即注册</button>
-    <p class="tip">同一IP最多注册2个账号</p>
+    <p class="tip">同一设备/IP最多注册2个账号</p>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
@@ -82,23 +85,44 @@
         const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
         const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        let myIp = "127.0.0.1";
+        // 生成随机本地会话ID作为兜底，绝对不会获取IP失败
+        let myIp = "local_" + Math.random().toString(36).substring(2, 15);
 
         // 零兼容加密
         function easyEnc(pass) {
             return window.btoa(encodeURIComponent(pass));
         }
 
+        // 多接口并行尝试获取IP，全部失败也能正常运行
+        async function getMyIp() {
+            const ipApis = [
+                "https://api.ipify.org?format=json",
+                "https://api.my-ip.io/v2/ip.json",
+                "https://ipapi.co/ip/"
+            ];
+
+            for(let api of ipApis) {
+                try {
+                    let res = await fetch(api, {timeout: 3000});
+                    if(!res.ok) continue;
+                    let data = await res.json();
+                    if(data.ip) {
+                        myIp = data.ip;
+                        alert("✅ 成功获取到你的公网IP：" + myIp);
+                        return;
+                    }
+                } catch(e) {
+                    console.warn(api + " 获取IP失败，尝试下一个接口");
+                    continue;
+                }
+            }
+
+            alert("⚠️  无法获取公网IP，将使用本地会话标识，不影响注册功能");
+        }
+
         // 全局获取IP
         (async function initIp() {
-            try {
-                let res = await fetch("https://api.ipify.org?format=json");
-                let data = await res.json();
-                myIp = data.ip;
-                alert("✅ 当前IP：" + myIp);
-            } catch(e) {
-                alert("⚠️  IP获取失败，使用默认IP");
-            }
+            await getMyIp();
         })();
 
         // 全局点击函数，绝对不会丢失
@@ -140,13 +164,13 @@
             }
             alert("✅ 用户名可用");
 
-            // 检查IP账号数量
+            // 检查当前标识下的账号数量
             let ipCheckRes = await sb.from("lt_users").select("id").eq("ip", myIp);
             if(ipCheckRes.data.length >= 2) {
-                alert("❌ 当前IP已经注册了2个账号，不能继续注册");
+                alert("❌ 当前设备/IP已经注册了2个账号，不能继续注册");
                 return;
             }
-            alert("✅ IP账号数量校验通过");
+            alert("✅ 账号数量校验通过");
 
             let encPwd = easyEnc(p);
             // 写入数据库

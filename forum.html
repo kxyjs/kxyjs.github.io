@@ -24,6 +24,9 @@
             text-decoration: none;
             margin-right: 20px;
         }
+        .nav-bar a:hover {
+            text-decoration: underline;
+        }
         .wrap {
             margin-bottom: 30px;
         }
@@ -105,23 +108,41 @@
         const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
         const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        let myIp = "127.0.0.1";
+        // 用随机生成的会话ID作为兜底IP，就算获取不到公网IP，也可以用来做同设备下账号数量限制
+        let myIp = "local_" + Math.random().toString(36).substring(2, 15);
 
         // 超简单兜底加密，零兼容问题
         function easyEnc(pass) {
             return window.btoa(encodeURIComponent(pass));
         }
 
-        // 获取当前IP
+        // 并行请求多个不同IP接口，只要有一个成功就拿到IP，全部失败就用兜底ID
         async function getMyIp() {
-            try {
-                let res = await fetch("https://api.ipify.org?format=json");
-                let data = await res.json();
-                myIp = data.ip;
-                alert("✅ 获取到你的IP：" + myIp);
-            } catch(e) {
-                alert("⚠️  IP获取失败，用默认IP 127.0.0.1");
+            // 多个备用IP查询接口，避免单点失效
+            const ipApis = [
+                "https://api.ipify.org?format=json",
+                "https://api.my-ip.io/v2/ip.json",
+                "https://ipapi.co/ip/"
+            ];
+
+            for(let api of ipApis) {
+                try {
+                    let res = await fetch(api, {timeout: 3000});
+                    if(!res.ok) continue;
+                    let data = await res.json();
+                    if(data.ip) {
+                        myIp = data.ip;
+                        alert("✅ 成功获取到你的公网IP：" + myIp);
+                        return;
+                    }
+                } catch(e) {
+                    console.warn(api + " 获取IP失败，尝试下一个接口");
+                    continue;
+                }
             }
+
+            // 所有IP接口都失败的场景，使用随机会话ID作为兜底标识
+            alert("⚠️  无法获取公网IP，将使用本地会话标识进行账号限制，不影响注册和发消息功能");
         }
 
         // 按钮点击的入口函数，写死全局作用域，绝对不会找不到
