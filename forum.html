@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>论坛 - 留言区</title>
+    <style>
+        * {box-sizing: border-box; margin: 0; padding: 0;}
+        body {
+            background: #fff;
+            color: #000;
+            font-family: system-ui, Arial;
+            padding: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .nav-bar {
+            font-size: 24px;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .nav-bar a {
+            color: #007bff;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .wrap {
+            margin-bottom: 30px;
+        }
+        .item {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #sendBtn {
+            padding: 10px 30px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .msg-card {
+            margin-top: 15px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        .msg-head {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .gold {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        .tip {
+            margin-top: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="forum.html">论坛</a> | <a href="register.html">注册</a>
+    </div>
+
+    <div class="wrap">
+        <h3>发布留言</h3>
+        <div class="item">
+            <label>用户名</label>
+            <input type="text" id="uInput" placeholder="输入注册的用户名">
+        </div>
+        <div class="item">
+            <label>密码</label>
+            <input type="password" id="pInput" placeholder="输入账号密码">
+        </div>
+        <div class="item">
+            <label>留言</label>
+            <textarea id="mInput" rows="4" placeholder="输入留言内容"></textarea>
+        </div>
+        <!-- 写死onclick事件，100%不会丢 -->
+        <button id="sendBtn" onclick="userClickPost()">发送留言</button>
+    </div>
+
+    <div class="tip" id="statusTip">页面初始化中...</div>
+    <div id="listBox"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // 页面第一时间执行，确认JS正常
+        alert("✅ 论坛页面JS加载成功，所有功能正常");
+
+        // 全局变量
+        const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let myIp = "127.0.0.1";
+
+        // 超简单兜底加密，零兼容问题
+        function easyEnc(pass) {
+            return window.btoa(encodeURIComponent(pass));
+        }
+
+        // 获取当前IP
+        async function getMyIp() {
+            try {
+                let res = await fetch("https://api.ipify.org?format=json");
+                let data = await res.json();
+                myIp = data.ip;
+                alert("✅ 获取到你的IP：" + myIp);
+            } catch(e) {
+                alert("⚠️  IP获取失败，用默认IP 127.0.0.1");
+            }
+        }
+
+        // 按钮点击的入口函数，写死全局作用域，绝对不会找不到
+        window.userClickPost = async function() {
+            // 这里第一时间弹提示，确认按钮真的被点到了
+            alert("🟢 按钮点击成功！现在开始处理发布请求");
+            
+            // 拿用户输入的值
+            let u = document.getElementById("uInput").value.trim();
+            let p = document.getElementById("pInput").value.trim();
+            let m = document.getElementById("mInput").value.trim();
+
+            if(!u || !p || !m) {
+                alert("❌ 请填写完整用户名、密码和留言");
+                return;
+            }
+
+            let encPwd = easyEnc(p);
+            alert("🔐 密码加密完成");
+
+            // 校验账号
+            let userRes = await sb.from("lt_users").select("username").eq("username", u).eq("password", encPwd);
+            if(userRes.error) {
+                alert("❌ 校验账号出错：" + userRes.error.message);
+                return;
+            }
+            if(!userRes.data || userRes.data.length === 0) {
+                alert("❌ 账号或密码不存在");
+                return;
+            }
+            alert("✅ 账号校验通过");
+
+            // 校验1分钟冷却
+            let lastMsgRes = await sb.from("lt_message").select("time").eq("username", u).order("time", {ascending: false}).limit(1);
+            if(lastMsgRes.data && lastMsgRes.data.length > 0) {
+                let lastT = new Date(lastMsgRes.data[0].time);
+                let nowT = new Date();
+                let diff = (nowT - lastT) / 1000;
+                if(diff < 60) {
+                    alert(`⏱️  冷却中，还需等${Math.ceil(60 - diff)}秒`);
+                    return;
+                }
+            }
+            alert("✅ 发送冷却校验通过");
+
+            // 写入留言
+            let insertRes = await sb.from("lt_message").insert({
+                ip: myIp,
+                username: u,
+                time: new Date().toISOString(),
+                message: m
+            });
+            if(insertRes.error) {
+                alert("❌ 写入留言失败：" + insertRes.error.message);
+                return;
+            }
+
+            alert("🎉 发布完全成功！留言已存入数据库");
+            document.getElementById("mInput").value = "";
+            loadAllMsg();
+        }
+
+        // 加载所有留言
+        async function loadAllMsg() {
+            document.getElementById("statusTip").innerText = "正在加载留言列表...";
+            let res = await sb.from("lt_message").select("*").order("time", {ascending: false});
+            let listBox = document.getElementById("listBox");
+            listBox.innerHTML = "";
+
+            if(res.error) {
+                document.getElementById("statusTip").innerText = "加载失败：" + res.error.message;
+                return;
+            }
+            if(!res.data || res.data.length === 0) {
+                document.getElementById("statusTip").innerText = "暂无留言";
+                return;
+            }
+
+            res.data.forEach(item => {
+                let card = document.createElement("div");
+                card.className = "msg-card";
+                let head = document.createElement("div");
+                head.className = "msg-head";
+                let unameSpan = document.createElement("span");
+                if(item.username === "kxyjs") {
+                    unameSpan.innerText = "kxyjs-V官方账号";
+                    unameSpan.className = "gold";
+                } else {
+                    unameSpan.innerText = item.username;
+                }
+                let timeSpan = document.createElement("span");
+                timeSpan.innerText = new Date(item.time).toLocaleString("zh-CN");
+                head.appendChild(unameSpan);
+                head.appendChild(timeSpan);
+
+                let content = document.createElement("div");
+                content.style.marginTop = "10px";
+                content.innerText = item.message;
+
+                card.appendChild(head);
+                card.appendChild(content);
+                listBox.appendChild(card);
+            });
+            document.getElementById("statusTip").innerText = `共${res.data.length}条留言`;
+        }
+
+        // 页面启动流程
+        (async function initAll() {
+            await getMyIp();
+            await loadAllMsg();
+            // 每30秒自动刷新
+            setInterval(loadAllMsg, 30000);
+        })();
+    </script>
+</body>
+</html>

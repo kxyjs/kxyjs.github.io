@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>账号注册</title>
+    <style>
+        * {box-sizing: border-box; margin: 0; padding: 0;}
+        body {
+            background: #fff;
+            color: #000;
+            font-family: system-ui, Arial;
+            padding: 30px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .nav-bar {
+            font-size: 24px;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .nav-bar a {
+            color: #007bff;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .item {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #regBtn {
+            padding: 12px 30px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .tip {
+            margin-top: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="forum.html">论坛</a> | <a href="register.html">注册</a>
+    </div>
+
+    <h3>账号注册</h3>
+    <div class="item">
+        <label>用户名</label>
+        <input type="text" id="regU" placeholder="2-20位字符">
+    </div>
+    <div class="item">
+        <label>密码</label>
+        <input type="password" id="regP" placeholder="最少6位">
+    </div>
+    <div class="item">
+        <label>确认密码</label>
+        <input type="password" id="regRP" placeholder="再次输入密码">
+    </div>
+    <!-- 写死onclick事件，100%触发 -->
+    <button id="regBtn" onclick="userClickReg()">立即注册</button>
+    <p class="tip">同一IP最多注册2个账号</p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // 页面第一时间确认JS运行
+        alert("✅ 注册页面JS加载成功");
+
+        const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let myIp = "127.0.0.1";
+
+        // 零兼容加密
+        function easyEnc(pass) {
+            return window.btoa(encodeURIComponent(pass));
+        }
+
+        // 全局获取IP
+        (async function initIp() {
+            try {
+                let res = await fetch("https://api.ipify.org?format=json");
+                let data = await res.json();
+                myIp = data.ip;
+                alert("✅ 当前IP：" + myIp);
+            } catch(e) {
+                alert("⚠️  IP获取失败，使用默认IP");
+            }
+        })();
+
+        // 全局点击函数，绝对不会丢失
+        window.userClickReg = async function() {
+            alert("🟢 注册按钮点击成功！开始处理注册流程");
+
+            let u = document.getElementById("regU").value.trim();
+            let p = document.getElementById("regP").value.trim();
+            let rp = document.getElementById("regRP").value.trim();
+
+            if(!u || !p || !rp) {
+                alert("❌ 请填写完整所有字段");
+                return;
+            }
+            if(u.length < 2 || u.length > 20) {
+                alert("❌ 用户名长度不对，需2-20位");
+                return;
+            }
+            if(p.length < 6) {
+                alert("❌ 密码不能少于6位");
+                return;
+            }
+            if(p !== rp) {
+                alert("❌ 两次密码不一致");
+                return;
+            }
+
+            alert("✅ 基础校验通过");
+
+            // 检查用户名重复
+            let checkUserRes = await sb.from("lt_users").select("id").eq("username", u);
+            if(checkUserRes.error) {
+                alert("❌ 校验用户名出错：" + checkUserRes.error.message);
+                return;
+            }
+            if(checkUserRes.data && checkUserRes.data.length > 0) {
+                alert("❌ 这个用户名已经被注册了");
+                return;
+            }
+            alert("✅ 用户名可用");
+
+            // 检查IP账号数量
+            let ipCheckRes = await sb.from("lt_users").select("id").eq("ip", myIp);
+            if(ipCheckRes.data.length >= 2) {
+                alert("❌ 当前IP已经注册了2个账号，不能继续注册");
+                return;
+            }
+            alert("✅ IP账号数量校验通过");
+
+            let encPwd = easyEnc(p);
+            // 写入数据库
+            let insertRes = await sb.from("lt_users").insert({
+                username: u,
+                password: encPwd,
+                ip: myIp
+            });
+
+            if(insertRes.error) {
+                alert("❌ 注册写入失败：" + insertRes.error.message);
+                return;
+            }
+
+            alert("🎉 注册完全成功！3秒后自动跳转到论坛");
+            setTimeout(() => window.location.href = "forum.html", 3000);
+        }
+    </script>
+</body>
+</html>
