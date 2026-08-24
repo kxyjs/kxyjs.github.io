@@ -70,12 +70,15 @@
         <label>确认密码</label>
         <input type="password" id="regRP" placeholder="再次输入密码">
     </div>
-    <button id="regBtn" onclick="userClickReg()">立即注册</button>
+    <!-- 初始状态下按钮禁用，页面完全加载完成后才启用 -->
+    <button id="regBtn" disabled="disabled">立即注册</button>
     <p class="tip">同一设备/IP最多注册2个账号</p>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        alert("✅ 注册页面JS加载成功");
+        // 全局开关：页面初始化未完全完成时，完全禁止注册逻辑执行
+        let pageReady = false;
+        alert("✅ 注册页面JS加载完成，等待IP初始化...");
 
         const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
         const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
@@ -86,14 +89,12 @@
             return window.btoa(encodeURIComponent(pass));
         }
 
-        // 和论坛页面完全一致的IP智能获取逻辑，双页面共享同一份localStorage缓存
+        // IP智能获取逻辑
         async function getMyIpSmart() {
-            // 1. 优先读取缓存
             const cachedIp = localStorage.getItem("cached_forum_ip");
             const cachedLocalId = localStorage.getItem("forum_fallback_local_id");
             const failedCount = Number(localStorage.getItem("ip_fetch_failed_count")) || 0;
 
-            // 2. 有有效公网IP缓存直接复用
             if (cachedIp && !cachedIp.startsWith("local_")) {
                 myIp = cachedIp;
                 alert("✅ 使用缓存公网IP：" + myIp);
@@ -101,7 +102,6 @@
                 return;
             }
 
-            // 3. 10次失败后直接复用已生成的持久化local标识
             if (cachedLocalId && failedCount >= 10) {
                 myIp = cachedLocalId;
                 alert("⚠️  10次获取IP失败，使用本地持久化标识：" + myIp);
@@ -109,7 +109,6 @@
                 return;
             }
 
-            // 4. 10个接口依次尝试获取IP，每个2秒超时
             const ipApis = [
                 "https://api.ipify.org?format=json",
                 "https://api.my-ip.io/v2/ip.json",
@@ -134,7 +133,7 @@
                         localStorage.setItem("cached_forum_ip", myIp);
                         localStorage.setItem("ip_fetch_failed_count", "0");
                         alert(`✅ 第${i+1}次成功获取IP：${myIp}，已存入本地缓存`);
-                        alert(`🎯 本次最终生效的IP标识：${myIp}`);
+                        //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                         return;
                     }
                 } catch(e) {
@@ -143,11 +142,9 @@
                 }
             }
 
-            // 5. 10次全部失败，更新失败计数
             const newFailedCount = failedCount + 1;
             localStorage.setItem("ip_fetch_failed_count", newFailedCount.toString());
 
-            // 6. 累计第10次失败，生成永久local标识
             if(newFailedCount >= 10 && !cachedLocalId) {
                 const newLocalId = "local_" + Math.random().toString(36).substring(2, 20);
                 localStorage.setItem("forum_fallback_local_id", newLocalId);
@@ -167,9 +164,15 @@
             }
         }
 
-        // 注册按钮逻辑
-        window.userClickReg = async function() {
-            alert("🟢 注册按钮点击成功");
+        // 注册函数，增加页面就绪状态校验
+        window.userClickReg = async function(e) {
+            // 双重校验：只有页面完全就绪、事件是真实的鼠标点击事件时才执行逻辑
+            if(!pageReady || !e.isTrusted) {
+                console.warn("拦截了非用户手动触发的点击事件");
+                return;
+            }
+
+            //alert("🟢 注册按钮点击成功，开始处理注册流程");
 
             let u = document.getElementById("regU").value.trim();
             let p = document.getElementById("regP").value.trim();
@@ -192,7 +195,7 @@
                 return;
             }
 
-            alert("✅ 基础校验通过");
+            //alert("✅ 基础校验通过");
 
             let checkUserRes = await sb.from("lt_users").select("id").eq("username", u);
             if(checkUserRes.error) {
@@ -203,14 +206,14 @@
                 alert("❌ 这个用户名已经被注册了");
                 return;
             }
-            alert("✅ 用户名可用");
+            //alert("✅ 用户名可用");
 
             let ipCheckRes = await sb.from("lt_users").select("id").eq("ip", myIp);
             if(ipCheckRes.data.length >= 2) {
                 alert("❌ 当前设备/IP已经注册了2个账号，不能继续注册");
                 return;
             }
-            alert("✅ 账号数量校验通过");
+            //alert("✅ 账号数量校验通过");
 
             let encPwd = easyEnc(p);
             let insertRes = await sb.from("lt_users").insert({
@@ -228,9 +231,18 @@
             setTimeout(() => window.location.href = "forum.html", 3000);
         }
 
-        (async function initIp() {
+        // 页面完全加载完成后，再动态绑定点击事件、启用按钮
+        document.addEventListener('DOMContentLoaded', async function() {
             await getMyIpSmart();
-        })();
+            // 动态绑定真实的点击事件，替换原本的写死onclick
+            document.getElementById('regBtn').addEventListener('click', userClickReg);
+            // 解除按钮禁用，让用户才能点击
+            document.getElementById('regBtn').disabled = false;
+            document.getElementById('regBtn').innerText = "立即注册";
+            // 最后把页面就绪开关打开
+            pageReady = true;
+            alert("✅ 页面初始化全部完成，现在可以点击注册按钮了");
+        });
     </script>
 </body>
 </html>

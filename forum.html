@@ -94,7 +94,7 @@
 
     <div class="tip" id="statusTip">页面初始化中...</div>
     <div id="listBox"></div>
-    kxyjs提供支持！(v1.3.4)
+    kxyjs提供支持！(v1.3.5 plus)
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         //alert("✅ 论坛页面JS加载成功");
@@ -121,7 +121,7 @@
                 myIp = cachedIp;
                 alert("✅ 使用缓存中的公网IP：" + myIp);
                 // 所有逻辑走完，最后弹最终结果
-                alert(`🎯 本次最终生效的IP标识：${myIp}`);
+                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             }
 
@@ -130,7 +130,7 @@
                 myIp = cachedLocalId;
                 alert("⚠️  10次获取公网IP失败，使用本地持久化标识：" + myIp);
                 // 所有逻辑走完，最后弹最终结果
-                alert(`🎯 本次最终生效的IP标识：${myIp}`);
+                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             }
 
