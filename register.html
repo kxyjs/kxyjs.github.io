@@ -78,7 +78,7 @@
     <script>
         // 全局开关：页面初始化未完全完成时，完全禁止注册逻辑执行
         let pageReady = false;
-        alert("✅ 注册页面JS加载完成，等待IP初始化...");
+        //alert("✅ 注册页面JS加载完成，等待IP初始化...");
 
         const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
         const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
@@ -98,14 +98,14 @@
             if (cachedIp && !cachedIp.startsWith("local_")) {
                 myIp = cachedIp;
                 alert("✅ 使用缓存公网IP：" + myIp);
-                alert(`🎯 本次最终生效的IP标识：${myIp}`);
+                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             }
 
             if (cachedLocalId && failedCount >= 10) {
                 myIp = cachedLocalId;
                 alert("⚠️  10次获取IP失败，使用本地持久化标识：" + myIp);
-                alert(`🎯 本次最终生效的IP标识：${myIp}`);
+                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             }
 
@@ -124,7 +124,7 @@
 
             for(let i = 0; i < 10; i++) {
                 try {
-                    alert(`🔄 第${i+1}次尝试获取公网IP...`);
+                    //alert(`🔄 第${i+1}次尝试获取公网IP...`);
                     let res = await fetch(ipApis[i], {signal: AbortSignal.timeout(2000)});
                     if(!res.ok) continue;
                     let data = await res.json();
@@ -150,17 +150,17 @@
                 localStorage.setItem("forum_fallback_local_id", newLocalId);
                 myIp = newLocalId;
                 alert(`❌ 累计10次获取IP全部失败，已生成本地永久标识：${newLocalId}`);
-                alert(`🎯 本次最终生效的IP标识：${myIp}`);
+                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             } else if(cachedLocalId) {
                 myIp = cachedLocalId;
                 alert(`⚠️  第${newFailedCount}次获取IP失败，复用已有本地标识：${cachedLocalId}`);
-                alert(`🎯 本次最终生效的IP标识：${myIp}`);
+                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             } else {
                 myIp = "temp_local_" + new Date().getTime();
                 alert(`⚠️  第${newFailedCount}次获取IP失败，使用临时标识，下次打开页面继续重试`);
-                alert(`🎯 本次最终生效的IP标识：${myIp}`);
+                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
             }
         }
 
@@ -241,7 +241,7 @@
             document.getElementById('regBtn').innerText = "立即注册";
             // 最后把页面就绪开关打开
             pageReady = true;
-            alert("✅ 页面初始化全部完成，现在可以点击注册按钮了");
+            //alert("✅ 页面初始化全部完成，现在可以点击注册按钮了");
         });
     </script>
 </body>
