@@ -95,16 +95,16 @@
             const cachedLocalId = localStorage.getItem("forum_fallback_local_id");
             const failedCount = Number(localStorage.getItem("ip_fetch_failed_count")) || 0;
 
-            if (cachedIp && !cachedIp.startsWith("local_")) {
-                myIp = cachedIp;
-                alert("✅ 使用缓存公网IP：" + myIp);
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
-                return;
-            }
+            //if (cachedIp && !cachedIp.startsWith("local_")) {
+            //    myIp = cachedIp;
+            //    //alert("✅ 使用缓存公网IP：" + myIp);
+            //    //alert(`🎯 本次最终生效的IP标识：${myIp}`);
+            //    return;
+            //}
 
             if (cachedLocalId && failedCount >= 10) {
                 myIp = cachedLocalId;
-                alert("⚠️  10次获取IP失败，使用本地持久化标识：" + myIp);
+                //alert("⚠️  10次获取IP失败，使用本地持久化标识：" + myIp);
                 //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             }
@@ -132,7 +132,7 @@
                         myIp = data.ip;
                         localStorage.setItem("cached_forum_ip", myIp);
                         localStorage.setItem("ip_fetch_failed_count", "0");
-                        alert(`✅ 第${i+1}次成功获取IP：${myIp}，已存入本地缓存`);
+                        //alert(`✅ 第${i+1}次成功获取IP：${myIp}，已存入本地缓存`);
                         //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                         return;
                     }
@@ -149,17 +149,17 @@
                 const newLocalId = "local_" + Math.random().toString(36).substring(2, 20);
                 localStorage.setItem("forum_fallback_local_id", newLocalId);
                 myIp = newLocalId;
-                alert(`❌ 累计10次获取IP全部失败，已生成本地永久标识：${newLocalId}`);
+                //alert(`❌ 累计10次获取IP全部失败，已生成本地永久标识：${newLocalId}`);
                 //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             } else if(cachedLocalId) {
                 myIp = cachedLocalId;
-                alert(`⚠️  第${newFailedCount}次获取IP失败，复用已有本地标识：${cachedLocalId}`);
+                //alert(`⚠️  第${newFailedCount}次获取IP失败，复用已有本地标识：${cachedLocalId}`);
                 //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             } else {
                 myIp = "temp_local_" + new Date().getTime();
-                alert(`⚠️  第${newFailedCount}次获取IP失败，使用临时标识，下次打开页面继续重试`);
+                //alert(`⚠️  第${newFailedCount}次获取IP失败，使用临时标识，下次打开页面继续重试`);
                 //alert(`🎯 本次最终生效的IP标识：${myIp}`);
             }
         }
