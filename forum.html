@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>论坛 - 留言区</title>
+    <!-- 引入Markdown渲染依赖marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {box-sizing: border-box; margin: 0; padding: 0;}
         body {
@@ -40,6 +42,10 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        textarea {
+            /* 提示用户可以用Markdown语法 */
+            placeholder: "输入留言内容，支持Markdown语法：# 标题、**加粗**、- 列表、`代码`、[链接](地址)、*斜体*"
+        }
         #sendBtn {
             padding: 10px 30px;
             background: #007bff;
@@ -68,6 +74,57 @@
             margin-top: 20px;
             color: #666;
         }
+        /* 新增Markdown渲染的默认样式，让渲染后的内容更美观 */
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            margin: 12px 0 8px 0;
+            line-height: 1.5;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+        .markdown-content p {
+            line-height: 1.6;
+            margin: 8px 0;
+        }
+        .markdown-content ul, .markdown-content ol {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+        .markdown-content blockquote {
+            border-left: 4px solid #007bff;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            color: #666;
+            margin: 10px 0;
+        }
+        .markdown-content pre {
+            background: #f6f8fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .markdown-content code {
+            background: #f1f3f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .markdown-content pre code {
+            background: transparent;
+            padding: 0;
+        }
+        .markdown-content a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+        .markdown-content img {
+            max-width: 100%;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -87,18 +144,19 @@
         </div>
         <div class="item">
             <label>留言</label>
-            <textarea id="mInput" rows="4" placeholder="输入留言内容"></textarea>
+            <textarea id="mInput" rows="4" placeholder="输入留言内容，支持Markdown语法：# 标题、**加粗**、- 列表、`代码`、[链接](地址)、*斜体*"></textarea>
         </div>
-        <button id="sendBtn" onclick="userClickPost()">发送留言</button>
+        <!-- 增加防误触发防护：按钮初始禁用，页面加载完成后才启用 -->
+        <button id="sendBtn" disabled="disabled">发送留言</button>
     </div>
 
     <div class="tip" id="statusTip">页面初始化中...</div>
     <div id="listBox"></div>
-    kxyjs提供支持！(v1.3.5 plus)
+    kxyjs提供支持！(v1.3.5 plus Markdown版)
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        //alert("✅ 论坛页面JS加载成功");
-
+        // 全局就绪开关，防止自动误触发
+        let pageReady = false;
         const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
         const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -111,30 +169,15 @@
 
         // 核心IP获取逻辑：缓存+10次重试+local标识持久化
         async function getMyIpSmart() {
-            // 1. 先读取本地缓存
             const cachedIp = localStorage.getItem("cached_forum_ip");
             const cachedLocalId = localStorage.getItem("forum_fallback_local_id");
             const failedCount = Number(localStorage.getItem("ip_fetch_failed_count")) || 0;
 
-            // 2. 如果之前已经拿到过有效公网IP缓存，直接用缓存，跳过所有请求
-            //if (cachedIp && !cachedIp.startsWith("local_")) {
-            //    myIp = cachedIp;
-            //    alert("✅ 使用缓存中的公网IP：" + myIp);
-            //    // 所有逻辑走完，最后弹最终结果
-            //    //alert(`🎯 本次最终生效的IP标识：${myIp}`);
-            //    return;
-            //}
-
-            // 3. 如果已经生成过持久化local标识，直接复用，不再重试（10次失败后永久固定）
             if (cachedLocalId && failedCount >= 10) {
                 myIp = cachedLocalId;
-                //alert("⚠️  10次获取公网IP失败，使用本地持久化标识：" + myIp);
-                // 所有逻辑走完，最后弹最终结果
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             }
 
-            // 4. 并行请求10个不同的公网IP接口，最多重试到10次
             const ipApis = [
                 "https://api.ipify.org?format=json",
                 "https://api.my-ip.io/v2/ip.json",
@@ -150,7 +193,6 @@
             alert(`我们在尝试获取ip……(最多20s!)`);
             for(let i = 0; i < 10; i++) {
                 try {
-                    // alert(`🔄 第${i+1}次尝试获取公网IP...`);
                     let res = await fetch(ipApis[i], {signal: AbortSignal.timeout(2000)});
                     if(!res.ok) continue;
                     let data = await res.json();
@@ -158,48 +200,36 @@
                         myIp = data.ip;
                         localStorage.setItem("cached_forum_ip", myIp);
                         localStorage.setItem("ip_fetch_failed_count", "0");
-                        //alert(`✅ 第${i+1}次成功获取IP：${myIp}，已存入本地缓存`);
-                        // 获取成功，最后弹最终结果
-                        //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                         return;
                     }
                 } catch(e) {
-                    //console.warn(`第${i+1}次IP请求失败：`, e);
                     continue;
                 }
             }
 
-            // 5. 10次全部请求失败，失败计数+1
             const newFailedCount = failedCount + 1;
             localStorage.setItem("ip_fetch_failed_count", newFailedCount.toString());
             
-            // 6. 第10次失败时生成持久化local标识，永久存入localStorage
             if(newFailedCount >= 10 && !cachedLocalId) {
                 const newLocalId = "local_" + Math.random().toString(36).substring(2, 20);
                 localStorage.setItem("forum_fallback_local_id", newLocalId);
                 myIp = newLocalId;
-                //alert(`❌ 累计10次获取IP全部失败，已为你生成本地持久化标识：${newLocalId}，后续永久使用该标识`);
-                // 生成永久标识后，最后弹最终结果
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             } else if (cachedLocalId) {
                 myIp = cachedLocalId;
-                //alert(`⚠️  第${newFailedCount}次获取IP失败，继续使用已有的本地标识：${cachedLocalId}`);
-                // 复用已有本地标识，最后弹最终结果
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             } else {
-                // 不足10次失败，生成临时会话标识，下次打开页面继续重试获取公网IP
                 myIp = "temp_local_" + new Date().getTime();
-                //alert(`⚠️  当前第${newFailedCount}次获取IP失败，使用临时会话标识，下次打开页面将继续重试获取公网IP`);
-                // 生成临时标识，最后弹最终结果
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
             }
         }
 
-        // 发布留言按钮逻辑
-        window.userClickPost = async function() {
-            //alert("🟢 发布按钮点击成功");
+        // 发布留言按钮逻辑，增加真实事件校验防误触发
+        window.userClickPost = async function(e) {
+            // 双重校验：必须页面就绪 + 真实用户手动点击
+            if(!pageReady || !e.isTrusted) {
+                console.warn("拦截了非手动触发的发布事件");
+                return;
+            }
             
             let u = document.getElementById("uInput").value.trim();
             let p = document.getElementById("pInput").value.trim();
@@ -211,7 +241,6 @@
             }
 
             let encPwd = easyEnc(p);
-            //alert("🔐 密码加密完成");
 
             let userRes = await sb.from("lt_users").select("username").eq("username", u).eq("password", encPwd);
             if(userRes.error) {
@@ -222,7 +251,6 @@
                 alert("❌ 账号或密码不存在");
                 return;
             }
-            //alert("✅ 账号校验通过");
 
             let lastMsgRes = await sb.from("lt_message").select("time").eq("username", u).order("time", {ascending: false}).limit(1);
             if(lastMsgRes.data && lastMsgRes.data.length > 0) {
@@ -234,12 +262,12 @@
                     return;
                 }
             }
-            //alert("✅ 发送冷却校验通过");
 
             let insertRes = await sb.from("lt_message").insert({
                 ip: myIp,
                 username: u,
                 time: new Date().toISOString(),
+                // 存入原始Markdown文本，不处理，后续渲染时再解析
                 message: m
             });
             if(insertRes.error) {
@@ -252,7 +280,7 @@
             loadAllMsg();
         }
 
-        // 加载留言列表
+        // 加载留言列表，渲染Markdown内容
         async function loadAllMsg() {
             document.getElementById("statusTip").innerText = "正在加载留言列表...";
             let res = await sb.from("lt_message").select("*").order("time", {ascending: false});
@@ -285,23 +313,31 @@
                 head.appendChild(unameSpan);
                 head.appendChild(timeSpan);
 
-                let content = document.createElement("div");
-                content.style.marginTop = "10px";
-                content.innerText = item.message;
+                let contentDiv = document.createElement("div");
+                contentDiv.className = "markdown-content";
+                // 这里把原始Markdown文本解析成HTML渲染出来
+                contentDiv.innerHTML = marked.parse(item.message);
 
                 card.appendChild(head);
-                card.appendChild(content);
+                card.appendChild(contentDiv);
                 listBox.appendChild(card);
             });
             document.getElementById("statusTip").innerText = `共${res.data.length}条留言，当前使用标识：${myIp}`;
         }
 
-        // 页面启动流程
-        (async function initAll() {
+        // 页面完全加载后初始化，动态绑定事件，防自动误触发
+        document.addEventListener('DOMContentLoaded', async function() {
             await getMyIpSmart();
+            // 动态绑定点击事件，替换原来的静态onclick
+            document.getElementById('sendBtn').addEventListener('click', userClickPost);
+            // 解除按钮禁用
+            document.getElementById('sendBtn').disabled = false;
+            // 开启就绪开关
+            pageReady = true;
             await loadAllMsg();
+            // 每30秒自动刷新留言
             setInterval(loadAllMsg, 30000);
-        })();
+        });
     </script>
 </body>
 </html>

@@ -70,7 +70,6 @@
         <label>确认密码</label>
         <input type="password" id="regRP" placeholder="再次输入密码">
     </div>
-    <!-- 初始状态下按钮禁用，页面完全加载完成后才启用 -->
     <button id="regBtn" disabled="disabled">立即注册</button>
     <p class="tip">同一设备/IP最多注册2个账号</p>
 
@@ -78,8 +77,6 @@
     <script>
         // 全局开关：页面初始化未完全完成时，完全禁止注册逻辑执行
         let pageReady = false;
-        //alert("✅ 注册页面JS加载完成，等待IP初始化...");
-
         const SUPABASE_URL = "https://aonoebeajppbziyzucsm.supabase.co";
         const SUPABASE_KEY = "sb_publishable_AKUMJeqzjC-LPEng6iWR_A_hMg2GT_J";
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -95,17 +92,8 @@
             const cachedLocalId = localStorage.getItem("forum_fallback_local_id");
             const failedCount = Number(localStorage.getItem("ip_fetch_failed_count")) || 0;
 
-            //if (cachedIp && !cachedIp.startsWith("local_")) {
-            //    myIp = cachedIp;
-            //    //alert("✅ 使用缓存公网IP：" + myIp);
-            //    //alert(`🎯 本次最终生效的IP标识：${myIp}`);
-            //    return;
-            //}
-
             if (cachedLocalId && failedCount >= 10) {
                 myIp = cachedLocalId;
-                //alert("⚠️  10次获取IP失败，使用本地持久化标识：" + myIp);
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             }
 
@@ -124,7 +112,6 @@
 
             for(let i = 0; i < 10; i++) {
                 try {
-                    //alert(`🔄 第${i+1}次尝试获取公网IP...`);
                     let res = await fetch(ipApis[i], {signal: AbortSignal.timeout(2000)});
                     if(!res.ok) continue;
                     let data = await res.json();
@@ -132,12 +119,9 @@
                         myIp = data.ip;
                         localStorage.setItem("cached_forum_ip", myIp);
                         localStorage.setItem("ip_fetch_failed_count", "0");
-                        //alert(`✅ 第${i+1}次成功获取IP：${myIp}，已存入本地缓存`);
-                        //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                         return;
                     }
                 } catch(e) {
-                    console.warn(`第${i+1}次IP请求失败：`, e);
                     continue;
                 }
             }
@@ -149,18 +133,12 @@
                 const newLocalId = "local_" + Math.random().toString(36).substring(2, 20);
                 localStorage.setItem("forum_fallback_local_id", newLocalId);
                 myIp = newLocalId;
-                //alert(`❌ 累计10次获取IP全部失败，已生成本地永久标识：${newLocalId}`);
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             } else if(cachedLocalId) {
                 myIp = cachedLocalId;
-                //alert(`⚠️  第${newFailedCount}次获取IP失败，复用已有本地标识：${cachedLocalId}`);
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
                 return;
             } else {
                 myIp = "temp_local_" + new Date().getTime();
-                //alert(`⚠️  第${newFailedCount}次获取IP失败，使用临时标识，下次打开页面继续重试`);
-                //alert(`🎯 本次最终生效的IP标识：${myIp}`);
             }
         }
 
@@ -171,8 +149,6 @@
                 console.warn("拦截了非用户手动触发的点击事件");
                 return;
             }
-
-            //alert("🟢 注册按钮点击成功，开始处理注册流程");
 
             let u = document.getElementById("regU").value.trim();
             let p = document.getElementById("regP").value.trim();
@@ -195,8 +171,6 @@
                 return;
             }
 
-            //alert("✅ 基础校验通过");
-
             let checkUserRes = await sb.from("lt_users").select("id").eq("username", u);
             if(checkUserRes.error) {
                 alert("❌ 用户名校验出错：" + checkUserRes.error.message);
@@ -206,14 +180,12 @@
                 alert("❌ 这个用户名已经被注册了");
                 return;
             }
-            //alert("✅ 用户名可用");
 
             let ipCheckRes = await sb.from("lt_users").select("id").eq("ip", myIp);
             if(ipCheckRes.data.length >= 2) {
                 alert("❌ 当前设备/IP已经注册了2个账号，不能继续注册");
                 return;
             }
-            //alert("✅ 账号数量校验通过");
 
             let encPwd = easyEnc(p);
             let insertRes = await sb.from("lt_users").insert({
@@ -234,14 +206,13 @@
         // 页面完全加载完成后，再动态绑定点击事件、启用按钮
         document.addEventListener('DOMContentLoaded', async function() {
             await getMyIpSmart();
-            // 动态绑定真实的点击事件，替换原本的写死onclick
+            // 动态绑定真实的点击事件
             document.getElementById('regBtn').addEventListener('click', userClickReg);
-            // 解除按钮禁用，让用户才能点击
+            // 解除按钮禁用
             document.getElementById('regBtn').disabled = false;
             document.getElementById('regBtn').innerText = "立即注册";
             // 最后把页面就绪开关打开
             pageReady = true;
-            //alert("✅ 页面初始化全部完成，现在可以点击注册按钮了");
         });
     </script>
 </body>
