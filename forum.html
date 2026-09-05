@@ -44,7 +44,7 @@
         }
         textarea {
             /* 提示用户可以用Markdown语法 */
-            placeholder: "输入留言内容，支持Markdown语法：# 标题、**加粗**、- 列表、`代码`、[链接](地址)、*斜体*"
+            placeholder: "输入留言内容，支持Markdown语法：# 标题、**加粗**、- 列表、`代码`、[链接](地址)、*斜体*，以及颜色设置：==背景色==、^文字颜色^"
         }
         #sendBtn {
             padding: 10px 30px;
@@ -125,6 +125,23 @@
             border-radius: 4px;
             margin: 10px 0;
         }
+        /* 颜色选择工具栏 */
+        .color-toolbar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 8px;
+        }
+        .color-btn {
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .color-btn:hover {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -134,6 +151,21 @@
 
     <div class="wrap">
         <h3>发布留言</h3>
+        <!-- 新增颜色选择工具栏 -->
+        <div class="color-toolbar">
+            <span>文字颜色：</span>
+            <button class="color-btn" onclick="setInlineStyle('color', 'red')">红色</button>
+            <button class="color-btn" onclick="setInlineStyle('color', 'green')">绿色</button>
+            <button class="color-btn" onclick="setInlineStyle('color', 'blue')">蓝色</button>
+            <button class="color-btn" onclick="setInlineStyle('color', 'yellow')">黄色</button>
+            <button class="color-btn" onclick="setInlineStyle('color', 'purple')">紫色</button>
+            <button class="color-btn" onclick="setInlineStyle('color', 'black')">黑色</button>
+            <span style="margin-left: 15px;">背景颜色：</span>
+            <button class="color-btn" onclick="setInlineStyle('background-color', 'yellow')">黄色</button>
+            <button class="color-btn" onclick="setInlineStyle('background-color', 'lightblue')">浅蓝色</button>
+            <button class="color-btn" onclick="setInlineStyle('background-color', 'lightgreen')">浅绿色</button>
+            <button class="color-btn" onclick="setInlineStyle('background-color', 'white')">白色</button>
+        </div>
         <div class="item">
             <label>用户名</label>
             <input type="text" id="uInput" placeholder="输入注册的用户名">
@@ -144,7 +176,7 @@
         </div>
         <div class="item">
             <label>留言</label>
-            <textarea id="mInput" rows="4" placeholder="输入留言内容，支持Markdown语法：# 标题、**加粗**、- 列表、`代码`、[链接](地址)、*斜体*"></textarea>
+            <textarea id="mInput" rows="4" placeholder="输入留言内容，支持Markdown语法：# 标题、**加粗**、- 列表、`代码`、[链接](地址)、*斜体*，以及颜色设置：==背景色==、^文字颜色^"></textarea>
         </div>
         <!-- 增加防误触发防护：按钮初始禁用，页面加载完成后才启用 -->
         <button id="sendBtn" disabled="disabled">发送留言</button>
@@ -338,6 +370,30 @@
             // 每30秒自动刷新留言
             setInterval(loadAllMsg, 30000);
         });
+
+        // 颜色设置函数：选中当前光标位置，设置inline style
+        function setInlineStyle(styleName, color) {
+            const textarea = document.getElementById('mInput');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            // 如果没有选中内容，就插入一个span包裹
+            if (start === end) {
+                const newText = `<span style="${styleName}: ${color}">${color === 'white' ? ' ' : ''}</span>`;
+                textarea.value = textarea.value.substring(0, start) + newText + textarea.value.substring(end);
+                textarea.focus();
+                // 移动光标到新插入内容的末尾
+                textarea.setSelectionRange(start + newText.length, start + newText.length);
+            } else {
+                // 如果有选中内容，直接包裹选中内容
+                const newText = `<span style="${styleName}: ${color}">${selectedText}</span>`;
+                textarea.value = textarea.value.substring(0, start) + newText + textarea.value.substring(end);
+                textarea.focus();
+                // 移动光标到新插入内容的末尾
+                textarea.setSelectionRange(start + newText.length, start + newText.length);
+            }
+        }
     </script>
 </body>
 </html>
